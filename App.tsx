@@ -2,7 +2,6 @@ import React, {useRef, useState} from 'react';
 import {SafeAreaView, ScrollView, StyleSheet, Text, View} from 'react-native';
 import getPermission from './perm';
 import {
-  ChannelProfileType,
   ClientRoleType,
   createAgoraRtcEngine,
   IRtcEngine,
@@ -39,7 +38,6 @@ const App = () => {
       engine.registerEventHandler(handlerOne);
       engine.initialize({
         appId: appId,
-        channelProfile: ChannelProfileType.ChannelProfileLiveBroadcasting,
       });
       engine.enableVideo();
       engine.startPreview();
@@ -78,14 +76,10 @@ const App = () => {
         contentContainerStyle={styles.scrollContainer}>
         {joined &&
           users.map(user => (
-            <>
-              <RtcSurfaceView
-                key={user}
-                canvas={{uid: user}}
-                style={styles.videoView}
-              />
+            <React.Fragment key={user}>
+              <RtcSurfaceView canvas={{uid: user}} style={styles.videoView} />
               <Text>{user}</Text>
-            </>
+            </React.Fragment>
           ))}
       </ScrollView>
     </SafeAreaView>
