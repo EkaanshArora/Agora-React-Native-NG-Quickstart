@@ -1,47 +1,46 @@
 import React, {useRef, useState} from 'react';
 import {SafeAreaView, ScrollView, StyleSheet, Text, View} from 'react-native';
-import getPermission from './perm';
+import {PermissionsAndroid, Platform} from 'react-native';
 import {
   ClientRoleType,
   createAgoraRtcEngine,
   IRtcEngine,
-  IRtcEngineEventHandler,
   RtcSurfaceView,
 } from 'react-native-agora-rtc-ng';
 
-const appId = '';
+const appId = ''; // Enter Agora App ID
+const token = ''; // Leave empty if using unsecured project
+const channel = 'test';
+const uid = 0;
 
 const App = () => {
   const engineRef = useRef<IRtcEngine>();
   const [users, setUsers] = useState<number[]>([]);
   const [joined, setJoined] = useState(false);
 
-  const handlerOne: IRtcEngineEventHandler = {
-    onJoinChannelSuccess: () => {
-      setUsers(p => [...p, 0]);
-      setJoined(true);
-    },
-    onUserJoined: (connection, remoteUid) => {
-      console.log('join', remoteUid, connection);
-      setUsers(p => [...p, remoteUid]);
-    },
-    onUserOffline: (_connection, remoteUid) => {
-      setUsers(p => p.filter(u => u !== remoteUid));
-    },
-  };
-
   const join = async () => {
     try {
-      await getPermission();
+      await getPermission(); // use helper function to get permissions on Android
       engineRef.current = createAgoraRtcEngine();
       const engine = engineRef.current;
-      engine.registerEventHandler(handlerOne);
+      engine.registerEventHandler({
+        onJoinChannelSuccess: () => {
+          setUsers(p => [...p, 0]);
+          setJoined(true);
+        },
+        onUserJoined: (_connection, remoteUid) => {
+          setUsers(p => [...p, remoteUid]);
+        },
+        onUserOffline: (_connection, remoteUid) => {
+          setUsers(p => p.filter(u => u !== remoteUid));
+        },
+      });
       engine.initialize({
         appId: appId,
       });
       engine.enableVideo();
       engine.startPreview();
-      engine.joinChannelWithOptions('', 'test2', 0, {
+      engine.joinChannelWithOptions(token, channel, uid, {
         clientRoleType: ClientRoleType.ClientRoleBroadcaster,
       });
     } catch (e) {
@@ -53,7 +52,11 @@ const App = () => {
     try {
       setUsers([]);
       engineRef.current?.leaveChannel();
-      engineRef.current?.unregisterEventHandler(handlerOne);
+      engineRef.current?.unregisterEventHandler({
+        onJoinChannelSuccess: () => {},
+        onUserJoined: () => {},
+        onUserOffline: () => {},
+      });
       engineRef.current?.release();
     } catch (e) {
       console.log(e);
@@ -102,5 +105,14 @@ const styles = StyleSheet.create({
   btnContainer: {flexDirection: 'row', justifyContent: 'center'},
   head: {fontSize: 20},
 });
+
+const getPermission = async () => {
+  if (Platform.OS === 'android') {
+    await PermissionsAndroid.requestMultiple([
+      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+      PermissionsAndroid.PERMISSIONS.CAMERA,
+    ]);
+  }
+};
 
 export default App;
